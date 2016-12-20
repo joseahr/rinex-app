@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Rinex Navigation And Observation Parser. Positioning solver!</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.20.0/ol.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css"/>
+  </head>
+  <body>
+    <!-- All of the Node.js APIs are available in this renderer process. -->
+    <!--
+    We are using Node.js <script>document.write(process.versions.node)</script>,
+    Chromium <script>document.write(process.versions.chrome)</script>,
+    and Electron <script>document.write(process.versions.electron)</script>.
+    -->
+    <div id="map">
+      <div class="fixed-action-btn toolbar">
+        <a class="btn-floating btn-large red">
+          <i class="large material-icons">add</i>
+        </a>
+        <ul>
+          <li class="waves-effect waves-light"><a id="btn-calc"><i class="material-icons">send</i></a></li>
+          <li class="waves-effect waves-light"><a id="btn-add" href="#modal-select-archivos"><i class="material-icons">add</i></a></li>
+          <li class="waves-effect waves-light"><a href="#modal-select-proj"><i class="material-icons">add</i></a></li>
+        </ul>
+      </div>
+      <div id="modal-cargando" class="modal">
+        <div class="modal-content">
+          <h4 class="center indigo-text">Cargando</h4>
+          <div class="progress center">
+              <div class="indeterminate"></div>
+          </div>
+        </div>
+      </div>
+      <div id="modal-select-proj" class="modal">
+        <div class="modal-content">
+          Escribe la proyección EPSG a buscar EPSG:
+          <div class="input-field inline">
+            <input id="proj-input" type="text" class="validate">
+            <label for="proj-input" data-error="wrong" data-success="right">EPSG</label>
+          </div>
+        </div>
+      </div>
+      <!-- Modal Structure -->
+      <div id="modal-select-archivos" class="modal bottom-sheet">
+        <div class="modal-header card-panel indigo lighten-3" style="margin-top : 0px;">
+          <h4 class="white-text center">AÑADE LOS FICHEROS RINEX</h4>
+        </div>
+        <div class="modal-content">
+          <p style="font-weight : bold;">Fichero de observación</p>
+          <form action="#" class="rinex">
+            <div class="file-field input-field">
+              <div class="btn">
+                <span>.XXo</span>
+                <input type="file" id="obs-input">
+              </div>
+              <div class="file-path-wrapper">
+                <input class="file-path validate" type="text">
+              </div>
+            </div>
+          </form>
+          <p style="font-weight : bold;">Fichero de navegación</p>
+          <form action="#" class="rinex">
+            <div class="file-field input-field">
+              <div class="btn">
+                <span>.XXn</span>
+                <input type="file" id="nav-input">
+              </div>
+              <div class="file-path-wrapper">
+                <input class="file-path validate" type="text">
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <a href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Cerrar</a>
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js" ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.20.0/ol.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
+  <script>if (window.module) module = window.module;</script>
+  <script type="text/javascript">
+    let map = new ol.Map({
+      layers: [
+        new ol.layer.Tile({
+          source: new ol.source.OSM()
+        })
+      ],
+      target: 'map',
+      controls: ol.control.defaults({
+        attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
+          collapsible: true
+        })
+      }),
+      view: new ol.View({
+        projection : 'EPSG:4326',
+        center: [0, 0],
+        zoom: 2
+      })
+    })
+
+    let layer = new ol.layer.Vector({
+      source : new ol.source.Vector()
+    })
+
+    map.addLayer(layer)
+
+    let render = ()=> map.on('postcompose', ()=>{
+      map.updateSize()
+      map.render()
+    })
+
+    $(window).resize(render)
+
+    $('.modal:not(#modal-cargando)').modal()
+    $('#modal-cargando').modal({ dismissible : false })
+
+    var mousePositionControl = new ol.control.MousePosition({
+      projection : 'EPSG:4326'
+    })
+
+    map.addControl(mousePositionControl)
+
+  </script>
+  <script>
+    require('./renderer.js')
+  </script>
+</html>

@@ -1,0 +1,38 @@
+{
+  "name": "gnss-positioning",
+  "version": "1.0.0",
+  "description": "Rinex Observation and Navigation Parser. GNSS Positioning.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "build --dir",
+    "dist": "build",
+    "postinstall": "install-app-deps"
+  },
+  "postinstall": "install-app-deps",
+  "repository": "",
+  "keywords": [
+    "Electron",
+    "Rinex",
+    "Positioning"
+  ],
+  "author": "GitHub",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "electron": "^1.4.1",
+    "bluebird": "^3.4.6",
+    "proj4": "^2.3.15",
+    "request-promise": "^4.1.1"
+  },
+  "build": {
+    "asarUnpack": "calc/*",
+    "appId": "com.h2geo.rinex-app",
+    "win": {
+      "iconUrl": ""
+    }
+  },
+  "dependencies": {
+    "bluebird": "^3.4.6",
+    "request-promise": "^4.1.1"
+  }
+}

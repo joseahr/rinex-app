@@ -1,2 +1,2 @@
 # rinex-app
-GNSS
+Electron app for GNSS Positioning
