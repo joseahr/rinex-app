@@ -22,8 +22,9 @@
         </a>
         <ul>
           <li class="waves-effect waves-light"><a id="btn-calc"><i class="material-icons">send</i></a></li>
-          <li class="waves-effect waves-light"><a id="btn-add" href="#modal-select-archivos"><i class="material-icons">add</i></a></li>
-          <li class="waves-effect waves-light"><a href="#modal-select-proj"><i class="material-icons">add</i></a></li>
+          <li class="waves-effect waves-light"><a id="btn-add" href="#modal-select-archivos"><i class="material-icons">attachment</i></a></li>
+          <li class="waves-effect waves-light"><a href="#modal-graficas"><i class="material-icons">insert_chart</i></a></li>
+          <li class="waves-effect waves-light"><a href="#modal-select-proj"><i class="material-icons">settings</i></a></li>
         </ul>
       </div>
       <div id="modal-cargando" class="modal">
@@ -45,9 +46,6 @@
       </div>
       <!-- Modal Structure -->
       <div id="modal-select-archivos" class="modal bottom-sheet">
-        <div class="modal-header card-panel indigo lighten-3" style="margin-top : 0px;">
-          <h4 class="white-text center">AÑADE LOS FICHEROS RINEX</h4>
-        </div>
         <div class="modal-content">
           <p style="font-weight : bold;">Fichero de observación</p>
           <form action="#" class="rinex">
@@ -90,15 +88,16 @@
     let map = new ol.Map({
       layers: [
         new ol.layer.Tile({
-          source: new ol.source.OSM()
+          source: new ol.source.TileWMS({
+            url : 'http://www.ign.es/wms-inspire/ign-base?',
+            params : {
+              "LAYERS" : 'IGNBaseTodo'
+            }
+          })
         })
       ],
       target: 'map',
-      controls: ol.control.defaults({
-        attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
-          collapsible: true
-        })
-      }),
+      controls: ol.control.defaults({ attribution : false }),
       view: new ol.View({
         projection : 'EPSG:4326',
         center: [0, 0],
@@ -123,10 +122,12 @@
     $('#modal-cargando').modal({ dismissible : false })
 
     var mousePositionControl = new ol.control.MousePosition({
-      projection : 'EPSG:4326'
+      projection : 'EPSG:4326',
+      className  : 'ol-mouse-position'
     })
 
     map.addControl(mousePositionControl)
+    $('.ol-mouse-position').addClass('collection white').css('position', 'absolute').css('padding', '5px')
 
   </script>
   <script>

@@ -1,3 +1,21 @@
+const {remote} = require('electron')
+const {Menu, MenuItem} = remote
+const buildMenu = disabled =>{
+    let enabled = !disabled
+    let menu     = Menu.buildFromTemplate([{   
+        label   : 'Opciones'
+        , submenu : [
+            { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled },
+            { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled },
+            { label : 'Configuración', click(){ $('#modal-select-proj').modal('open') }, enabled }
+        ]
+    },{
+        label : 'Acerca de...',
+        enabled
+    }])
+    Menu.setApplicationMenu(menu)
+}
+buildMenu()
 // This file is required by the index.html file and will
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
@@ -11,8 +29,10 @@ const reader   = new FileReader
 const print = console.log.bind(console)
 let [navFilePath, obsFilePath] = [null, null]
 const projections = {}
-const getProjStrUrl = epsg => `http://epsg.io/${epsg}.proj4`
-const fetchProjWKT = epsg => request({ uri : getProjStrUrl(epsg) })
+const fetchProj = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
+
+const build             = true
+const BuildResourcesDir = build ? 'resources/app.asar.unpacked/' : ''
 
 const readFile = f => new Promise((resolve, reject)=>{
     reader.onload = e => resolve(e.target.result)
@@ -40,12 +60,14 @@ $('#btn-calc').click(function(e){
     // Ejecutar python
     console.log('python start')
     $('#modal-cargando').modal('open')
-    let py = spawn('python',['resources/app.asar.unpacked/calc/ResolvePosition.py', obsFilePath, navFilePath])
+    buildMenu(true)
+    let py = spawn('python',[`${BuildResourcesDir}calc/ResolvePosition.py`, obsFilePath, navFilePath])
     py.stdout.on('data', data => console.log('data : ', data.toString()))
     py.on('close', ()=>{
         console.log('Fin')
         $('#modal-cargando').modal('close')
-        $.get('../app.asar.unpacked/calc/results/solucion.json', function(data){
+        let jsonPath = build ? '../app.asar.unpacked/calc/results/solucion.json' : 'calc/results/solucion.json'
+        $.get(jsonPath, function(data){
             let coords = JSON.parse(data.replace(/\'/g, '"'))
             let bbox   = ol.extent.boundingExtent(coords.map( coo => [coo.lon, coo.lat]))
             print(bbox)
@@ -58,6 +80,7 @@ $('#btn-calc').click(function(e){
             navFilePath = obsFilePath = null
             $('.rinex').each(function(idx, el){ el.reset() })
             map.getView().fit(bbox, map.getSize(), { duration : 1000 })
+            buildMenu()
         })
     })
 })
@@ -74,7 +97,7 @@ $('input[type=file]').change(function(e){
         if(!extname.match(/\.\d{2}[oO]/)) 
             return Materialize.toast('Debe añadir un fichero con extensión .XXo ó .XXO, por ejemplo .11o', 2500)
 
-        let fpath = `resources/app.asar.unpacked/calc/data/obs${extname}`
+        let fpath = `${BuildResourcesDir}calc/data/obs${extname}`
         readFile(e.target.files[0])
         .then(ftext=> fs.writeFile(fpath, ftext))
         .then( ()=>{ obsFilePath = fpath })
@@ -84,7 +107,7 @@ $('input[type=file]').change(function(e){
         if(!extname.match(/\.\d{2}[nN]/))
             return Materialize.toast('Debe añadir un fichero con extensión .XXn ó .XXN, por ejemplo .11n', 2500)
         
-        let fpath = `resources/app.asar.unpacked/calc/data/nav${extname}`
+        let fpath = `${BuildResourcesDir}calc/data/nav${extname}`
         readFile(e.target.files[0])
         .then(ftext=> fs.writeFile(fpath, ftext))
         .then( ()=>{ navFilePath = fpath })
@@ -95,7 +118,7 @@ $('input[type=file]').change(function(e){
 $('#proj-input').keyup(function(e){
     if(e.which === 13){
         let epsg = $(this).val()
-        fetchProjWKT(epsg)
+        fetchProj(epsg)
         .then( projDef => {
             proj4.defs(`EPSG:${epsg}`, projDef)
             let proj = ol.proj.get(`EPSG:${epsg}`)
