@@ -35,6 +35,15 @@
           </div>
         </div>
       </div>
+      <div id="info-window" class="row">
+        <div class="col s12 m5">
+          <div id="info-window-content" class="card-panel teal">
+            <span class="white-text">I am a very simple card. I am good at containing small bits of information.
+            I am convenient because I require little markup to use effectively. I am similar to what is called a panel in other frameworks.
+            </span>
+          </div>
+        </div>
+      </div>
       <div id="modal-chart" class="modal">
         <div class="modal-content">
           <canvas id="chart" width="500" height="300"></canvas>
@@ -91,11 +100,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
   <script>if (window.module) module = window.module;</script>
   <script type="text/javascript">
-    let map = new ol.Map({
+    const map = new ol.Map({
       layers: [
         new ol.layer.Tile({
           source: new ol.source.TileWMS({
             url : 'http://www.ign.es/wms-inspire/ign-base?',
+            wrapX : false, 
             params : {
               "LAYERS" : 'IGNBaseTodo'
             }
@@ -111,13 +121,35 @@
       })
     })
 
-    let layer = new ol.layer.Vector({
+    const layer = new ol.layer.Vector({
       source : new ol.source.Vector()
     })
-
     map.addLayer(layer)
 
-    let render = ()=> map.on('postcompose', ()=>{
+    const selectInteraction = new ol.interaction.Select({
+        condition :     ol.events.condition.pointerMove
+      , layers : [ layer ] 
+      , filter(feature, layer_){
+        console.log(feature)
+        document.body.style.cursor = 'pointer'
+        console.log('print')
+        $('#info-window').css('visibility', 'visible')
+        $('#info-window-content').html(`<p class="white-text">
+          lon : ${feature.getProperties().lon.toFixed(8)},
+          lat : ${feature.getProperties().lat.toFixed(8)},
+          h   : ${feature.getProperties().h.toFixed(3)} 
+        <p>`)
+        map.once('pointermove', ()=>{ 
+          document.body.style.cursor = 'default' 
+          $('#info-window').css('visibility', 'hidden')
+        })
+        return feature
+      }
+    })
+
+    map.addInteraction(selectInteraction)
+
+    const render = ()=> map.on('postcompose', ()=>{
       map.updateSize()
       map.render()
     })
@@ -133,7 +165,10 @@
     })
 
     map.addControl(mousePositionControl)
-    $('.ol-mouse-position').addClass('collection white').css('position', 'absolute').css('padding', '5px')
+    $('.ol-mouse-position')
+      .addClass('collection white indigo-text')
+      .css('position', 'absolute')
+      .css('padding', '5px')
 
   </script>
   <script>

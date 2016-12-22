@@ -11,25 +11,6 @@ const print    = console.log.bind(console)
 let ctx        = $('#chart')
 let chart
 let dataChart
-
-// Función para crear/actualizar el menú principal
-const buildMenu = disabled =>{
-    let enabled = !disabled
-    let menu     = Menu.buildFromTemplate([{   
-        label   : 'Opciones'
-        , submenu : [
-            { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled },
-            { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled },
-            { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : dataChart ? true : false },
-            { label : 'Configuración', click(){ $('#modal-select-proj').modal('open') }, enabled }
-        ]
-    },{
-        label : 'Acerca de...',
-        enabled
-    }])
-    Menu.setApplicationMenu(menu)
-}
-buildMenu()
 // Variables que hacen referencia al path para los ficheros RINEX
 let [navFilePath, obsFilePath] = [null, null]
 // Función para obtener la proyección de la página epsg.io
@@ -54,6 +35,10 @@ $('#btn-calc').click(function(e){
     $('#modal-cargando').modal('open')
     buildMenu(true)
     let py = spawn('python',[`${BuildResourcesDir}calc/ResolvePosition.py`, obsFilePath, navFilePath])
+
+    navFilePath = obsFilePath = null
+    buildMenu()
+
     py.stdout.on('data', data => console.log('data : ', data.toString()))
     py.on('close', ()=>{
         $('#modal-cargando').modal('close')
@@ -65,9 +50,9 @@ $('#btn-calc').click(function(e){
                 let feature = new ol.Feature({
                     geometry : new ol.geom.Point([coord.lon, coord.lat])
                 })
+                feature.setProperties(coord)
                 layer.getSource().addFeature(feature)
             })
-            navFilePath = obsFilePath = null
             $('.rinex').each(function(idx, el){ el.reset() })
             map.getView().fit(bbox, map.getSize(), { duration : 1000 })
             buildChart()
@@ -104,6 +89,7 @@ $('input[type=file]').change(function(e){
         .then( ()=>{ navFilePath = fpath })
         .catch( err =>{ Materialize.toast(`Error : ${err}`, 2500) })
     }
+    buildMenu()
 });
 
 $('#proj-input').keyup(function(e){
@@ -159,3 +145,22 @@ function createChart(){
         }
     })
 }
+
+// Función para crear/actualizar el menú principal
+const buildMenu = disabled =>{
+    let enabled = !disabled
+    let menu     = Menu.buildFromTemplate([{   
+        label   : 'Opciones'
+        , submenu : [
+            { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled : enabled },
+            { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled : obsFilePath && navFilePath ? true : false },
+            { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : dataChart ? true : false },
+            { label : 'Configuración', click(){ $('#modal-select-proj').modal('open') }, enabled }
+        ]
+    },{
+        label : 'Acerca de...',
+        enabled
+    }])
+    Menu.setApplicationMenu(menu)
+}
+buildMenu()
