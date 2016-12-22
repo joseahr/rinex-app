@@ -23,7 +23,7 @@
         <ul>
           <li class="waves-effect waves-light"><a id="btn-calc"><i class="material-icons">send</i></a></li>
           <li class="waves-effect waves-light"><a id="btn-add" href="#modal-select-archivos"><i class="material-icons">attachment</i></a></li>
-          <li class="waves-effect waves-light"><a href="#modal-graficas"><i class="material-icons">insert_chart</i></a></li>
+          <li class="waves-effect waves-light"><a id="btn-chart" href="#modal-chart"><i class="material-icons">insert_chart</i></a></li>
           <li class="waves-effect waves-light"><a href="#modal-select-proj"><i class="material-icons">settings</i></a></li>
         </ul>
       </div>
@@ -33,6 +33,11 @@
           <div class="progress center">
               <div class="indeterminate"></div>
           </div>
+        </div>
+      </div>
+      <div id="modal-chart" class="modal">
+        <div class="modal-content">
+          <canvas id="chart" width="500" height="300"></canvas>
         </div>
       </div>
       <div id="modal-select-proj" class="modal">
@@ -83,6 +88,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.20.0/ol.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
   <script>if (window.module) module = window.module;</script>
   <script type="text/javascript">
     let map = new ol.Map({

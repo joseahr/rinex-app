@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "bluebird": "^3.4.6",
+    "chartjs": "^0.3.24",
     "request-promise": "^4.1.1"
   }
 }

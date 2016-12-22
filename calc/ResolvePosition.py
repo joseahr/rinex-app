@@ -316,7 +316,7 @@ class Solver(object) :
                     tcorr= epoc['OBSERVACIONES'][sat]['TCORR']
                     A.append([-(Xsat-Xest)/dist, -(Ysat-Yest)/dist, -(Zsat-Zest)/dist, 1])
                     K.append([p2 - dist - corr_reloj + (self.C*tcorr) - dtropo - Il2])
-                    P.append(sin(ele)**2/(1.5*0.3)**2)
+                    P.append((sin(ele)**2)/((1.5*0.3)**2))
                     '''
                     if sat == 'G04' and cont < 2:
                         print (traveltime)
@@ -339,30 +339,30 @@ class Solver(object) :
                 matrizP = matrix(diag(P))
 
                 ## Calculamos la solución
-                [dx, dy, dz, corr_reloj] = linalg.inv(matrizA.transpose() * matrizP * matrizA) * (matrizA.transpose() * matrizP * matrizK)
+                matrizX = [dx, dy, dz, corr_reloj] = linalg.inv(matrizA.transpose() * matrizP * matrizA) * (matrizA.transpose() * matrizP * matrizK)
                 Xest += dx[0, 0]
                 Yest += dy[0, 0]
                 Zest += dz[0, 0]
                 corr_reloj = corr_reloj[0, 0]/self.C
             
             pgeo_ = Cargeo2Geo(Punto3D(Xest, Yest, Zest), 'WGS 84')
-            matrizR = (matrizA * matrix([dx, dy, dz, corr_reloj]).transpose()) - matrizK
+            matrizR = dot( matrizA, matrizX ) - matrizK
             gdl = shape(matrizA)
-            est = float(matrizR.transpose() * matrizP * matrizR / (gdl[0] - gdl[1]))
-            #print(est)
-            Qxx = dot(linalg.inv(matrizA.transpose() * matrizP * matrizA), est)
-            s = linalg.inv(matrizA.transpose() * matrizP * matrizA)
-            dx = Qxx[0,0] = s[0,0]
-            dy = Qxx[0,1] = s[1,1]
-            dz = Qxx[0,2] = s[2,2]
-            dt = Qxx[0,3] = s[3,3]
-            ##print(dx, dy, dz, dt)
+            est_ = float(sqrt( dot(dot( matrizR.transpose(), matrizP), matrizR ) ) / (gdl[0] - gdl[1]))
+            #print(est_, matrizA, matrizR, 'P', matrizP)
+            Qxx = dot(linalg.inv( dot( dot( matrizA.transpose(), matrizP ), matrizA ) ), est_)
+            dx = sqrt(Qxx[0,0])
+            dy = sqrt(Qxx[1,1])
+            dz = sqrt(Qxx[2,2])
+            dt = sqrt(Qxx[3,3])
+            #print(dx, dy, dz, dt)
             ##print(Qxx)
             self.resultados.append({
                   'tobs' : str(tobs)
                 , 'lon'  : pgeo_.getLongitud()
                 , 'lat'  : pgeo_.getLatitud()
                 , 'err'  : [dx, dy, dx, dt]
+                , 'est'  : est_
             })
             ##print(tobs, Qxx, Xest, Yest, Zest, pgeo_.getLongitud(), pgeo_.getLatitud(), pgeo_.getAlturaElipsoidal(), 'num_sats', len(epoc['OBSERVACIONES'].keys()))
         ##print('Fin')
@@ -399,8 +399,8 @@ if __name__ == '__main__':
 ## Función principal para probar la clase
 def main():
     ## Creamos un objeto de la clase
-    navParser = NavigationParser('brdc0590-1.11n')
-    obsParser = ObservationParser('89090590-1.11o')
+    navParser = NavigationParser('sampledata/brdc0590-1.11n')
+    obsParser = ObservationParser('sampledata/89090590-1.11o')
     solver = Solver(navParser, obsParser)
     ##print (solver.epocas)
     pass

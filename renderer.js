@@ -1,5 +1,18 @@
-const {remote} = require('electron')
-const {Menu, MenuItem} = remote
+const { remote } = require('electron')
+const { Menu, MenuItem } = remote
+const bb       = require('bluebird')
+const fs       = bb.promisifyAll(require('fs'))
+const path     = require('path')
+const spawn    = require('child_process').spawn
+const request  = require('request-promise')
+const reader   = new FileReader
+const print    = console.log.bind(console)
+
+let ctx        = $('#chart')
+let chart
+let dataChart
+
+// Función para crear/actualizar el menú principal
 const buildMenu = disabled =>{
     let enabled = !disabled
     let menu     = Menu.buildFromTemplate([{   
@@ -7,6 +20,7 @@ const buildMenu = disabled =>{
         , submenu : [
             { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled },
             { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled },
+            { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : dataChart ? true : false },
             { label : 'Configuración', click(){ $('#modal-select-proj').modal('open') }, enabled }
         ]
     },{
@@ -16,22 +30,12 @@ const buildMenu = disabled =>{
     Menu.setApplicationMenu(menu)
 }
 buildMenu()
-// This file is required by the index.html file and will
-// be executed in the renderer process for that window.
-// All of the Node.js APIs are available in this process.
-const bb       = require('bluebird')
-const fs       = bb.promisifyAll(require('fs'))
-const path     = require('path')
-const spawn    = require('child_process').spawn
-const request  = require('request-promise')
-const reader   = new FileReader
-
-const print = console.log.bind(console)
+// Variables que hacen referencia al path para los ficheros RINEX
 let [navFilePath, obsFilePath] = [null, null]
-const projections = {}
-const fetchProj = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
+// Función para obtener la proyección de la página epsg.io
+const fetchProj   = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
 
-const build             = true
+const build             = false
 const BuildResourcesDir = build ? 'resources/app.asar.unpacked/' : ''
 
 const readFile = f => new Promise((resolve, reject)=>{
@@ -39,18 +43,6 @@ const readFile = f => new Promise((resolve, reject)=>{
     reader.onerror = reject
     reader.readAsText(f)
 })
-/*
-const calcBBOX = data => data.reduce( (bbox, coord, idx)=>{
-    if(coord.lon < bbox[0]) bbox[0] = coord.lon
-    else if(coord.lon > bbox[2]) bbox[2] = coord.lon
-
-    if(coord.lat < bbox[1]) bbox[1] = coord.lat
-    else if(coord.lat > bbox[3]) bbox[3] = coord.lat
-
-    return bbox
-}, [Number.MAX_VALUE, Number.MAX_VALUE, Number.MIN_VALUE, Number.MIN_VALUE]) //Xmin, Ymin, Xmax, Ymax
-//.map( (pt, index)=> ( (index + 1) < 2 ? pt - 0.00001 : pt + 0.00001))
-*/
 
 $('#btn-calc').click(function(e){
     if(!obsFilePath)
@@ -64,13 +56,11 @@ $('#btn-calc').click(function(e){
     let py = spawn('python',[`${BuildResourcesDir}calc/ResolvePosition.py`, obsFilePath, navFilePath])
     py.stdout.on('data', data => console.log('data : ', data.toString()))
     py.on('close', ()=>{
-        console.log('Fin')
         $('#modal-cargando').modal('close')
         let jsonPath = build ? '../app.asar.unpacked/calc/results/solucion.json' : 'calc/results/solucion.json'
         $.get(jsonPath, function(data){
-            let coords = JSON.parse(data.replace(/\'/g, '"'))
+            let coords = dataChart = JSON.parse(data.replace(/\'/g, '"'))
             let bbox   = ol.extent.boundingExtent(coords.map( coo => [coo.lon, coo.lat]))
-            print(bbox)
             coords.forEach(function(coord){
                 let feature = new ol.Feature({
                     geometry : new ol.geom.Point([coord.lon, coord.lat])
@@ -80,6 +70,7 @@ $('#btn-calc').click(function(e){
             navFilePath = obsFilePath = null
             $('.rinex').each(function(idx, el){ el.reset() })
             map.getView().fit(bbox, map.getSize(), { duration : 1000 })
+            buildChart()
             buildMenu()
         })
     })
@@ -122,7 +113,6 @@ $('#proj-input').keyup(function(e){
         .then( projDef => {
             proj4.defs(`EPSG:${epsg}`, projDef)
             let proj = ol.proj.get(`EPSG:${epsg}`)
-            print(projDef, proj)
             mousePositionControl.setProjection(proj)
             $(this).val('')
             $('#modal-select-proj').modal('close')
@@ -130,3 +120,42 @@ $('#proj-input').keyup(function(e){
         .catch( err=>{ Materialize.toast(`Error : ${err}`, 2500) })
     }
 })
+
+$('#modal-chart').modal({
+      ready : createChart
+})
+
+function buildChart(){
+    fetchProj('25830')
+    .then(projDef =>{
+        proj4.defs('EPSG:25830', projDef)
+        let proj = ol.proj.get('EPSG:25830')
+        dataChart = dataChart.map( point =>{
+            print(point)
+            let [x, y] = ol.proj.transform([point.lon, point.lat], 'EPSG:4326', 'EPSG:25830') 
+            return {x, y}
+        })
+    })
+}
+
+function createChart(){
+    chart = new Chart(document.getElementById('chart'), {
+            type : 'line'
+        , data : {
+            datasets : [{
+                  label : 'Plot X, Y'
+                , data : dataChart
+                , fill : false
+                , pointRadius : 0.5
+            }]
+        }
+        , options: {
+            scales: {
+                xAxes: [{
+                    type: 'linear',
+                    position: 'bottom'
+                }]
+            }
+        }
+    })
+}
