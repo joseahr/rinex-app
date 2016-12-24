@@ -36,11 +36,8 @@
         </div>
       </div>
       <div id="info-window" class="row">
-        <div class="col s12 m5">
+        <div class="col s12">
           <div id="info-window-content" class="card-panel teal">
-            <span class="white-text">I am a very simple card. I am good at containing small bits of information.
-            I am convenient because I require little markup to use effectively. I am similar to what is called a panel in other frameworks.
-            </span>
           </div>
         </div>
       </div>
@@ -134,11 +131,42 @@
         document.body.style.cursor = 'pointer'
         console.log('print')
         $('#info-window').css('visibility', 'visible')
-        $('#info-window-content').html(`<p class="white-text">
-          lon : ${feature.getProperties().lon.toFixed(8)},
-          lat : ${feature.getProperties().lat.toFixed(8)},
-          h   : ${feature.getProperties().h.toFixed(3)} 
-        <p>`)
+        let props = feature.getProperties()
+        $('#info-window-content').html(`
+          <h4 class="white-text center">Info del punto capturado</h4>
+          <div class="card-panel white">
+            <table style="width:100%">
+              <tr>
+                <th>Longitud</th>
+                <th>Latitud</th>
+                <th>h elipsoidal</th>
+              </tr>
+              <tr>
+                <td>${props.lon.toFixed(8)}</td>
+                <td>${props.lat.toFixed(8)}</td>
+                <td>${props.h.toFixed(3)}</td>
+              </tr>
+            </table> 
+            <table style="width:100%">
+              <tr>
+                <th>X</th>
+                <th>Y</th>
+                <th>Z</th>
+                <th>dx</th>
+                <th>dy</th>
+                <th>dz</th>
+              </tr>
+              <tr>
+                <td>${props.X.toFixed(8)}</td>
+                <td>${props.Y.toFixed(8)}</td>
+                <td>${props.Z.toFixed(3)}</td>
+                <td>${props.err[0].toFixed(3)}</td>
+                <td>${props.err[1].toFixed(3)}</td>
+                <td>${props.err[2].toFixed(3)}</td>
+              </tr>
+            </table> 
+           </div>
+        `)
         map.once('pointermove', ()=>{ 
           document.body.style.cursor = 'default' 
           $('#info-window').css('visibility', 'hidden')

@@ -14,9 +14,18 @@ html, body, #map{
     left     : 0px;
     right    : 0px;
     top      : 80px;
-    padding-left  : 80px;
-    padding-right : 80px;
+    padding-left  : 25%;
+    padding-right : 25%;
     z-index       : 1;
     pointer-events : none;
     visibility     : hidden;
+    overflow-x     : hidden;
+}
+
+p {
+    margin : 0px;
+}
+
+td, th {
+    font-size : 0.75em;
 }

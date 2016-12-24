@@ -1,8 +1,10 @@
 const { remote } = require('electron')
+const { BrowserWindow } = remote
 const { Menu, MenuItem } = remote
 const bb       = require('bluebird')
 const fs       = bb.promisifyAll(require('fs'))
 const path     = require('path')
+const url      = require('url')
 const spawn    = require('child_process').spawn
 const request  = require('request-promise')
 const reader   = new FileReader
@@ -159,7 +161,19 @@ const buildMenu = disabled =>{
         ]
     },{
         label : 'Acerca de...',
-        enabled
+        click(){
+            let child = new BrowserWindow({parent : remote.getCurrentWindow(), modal: true, show: false})
+            child.setMenu(null)
+            child.loadURL(url.format({
+                pathname: path.join(__dirname, 'about.html'),
+                protocol: 'file:',
+                slashes: true
+            }))
+            child.webContents.openDevTools()
+            child.once('ready-to-show', () => {
+                child.show()
+            })
+        }
     }])
     Menu.setApplicationMenu(menu)
 }

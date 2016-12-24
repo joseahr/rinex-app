@@ -362,6 +362,9 @@ class Solver(object) :
                 , 'lon'  : pgeo_.getLongitud()
                 , 'lat'  : pgeo_.getLatitud()
                 , 'h'    : pgeo_.getAlturaElipsoidal()
+                , 'X'    : Xest
+                , 'Y'    : Yest
+                , 'Z'    : Zest
                 , 'err'  : [dx, dy, dx, dt]
                 , 'est'  : est_
             })
