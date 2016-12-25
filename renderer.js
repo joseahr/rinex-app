@@ -18,7 +18,8 @@ let [navFilePath, obsFilePath] = [null, null]
 // Función para obtener la proyección de la página epsg.io
 const fetchProj   = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
 
-const build             = false
+const build             = process.env.build === 'true'
+//console.log('build', build, typeof build)
 const BuildResourcesDir = build ? 'resources/app.asar.unpacked/' : ''
 
 const readFile = f => new Promise((resolve, reject)=>{
@@ -33,7 +34,7 @@ $('#btn-calc').click(function(e){
     if(!navFilePath)
         return Materialize.toast('Debe añadir el fichero RINEX de navegación', 2500)
     // Ejecutar python
-    console.log('python start')
+    //console.log('python start')
     $('#modal-cargando').modal('open')
     buildMenu(true)
     let py = spawn('python',[`${BuildResourcesDir}calc/ResolvePosition.py`, obsFilePath, navFilePath])
@@ -48,13 +49,75 @@ $('#btn-calc').click(function(e){
         $.get(jsonPath, function(data){
             let coords = dataChart = JSON.parse(data.replace(/\'/g, '"'))
             let bbox   = ol.extent.boundingExtent(coords.map( coo => [coo.lon, coo.lat]))
+
             coords.forEach(function(coord){
                 let feature = new ol.Feature({
-                    geometry : new ol.geom.Point([coord.lon, coord.lat])
+                    geometry : new ol.geom.Point([coord.lon, coord.lat, coord.h], 'XYZ')
                 })
                 feature.setProperties(coord)
                 layer.getSource().addFeature(feature)
             })
+
+            let coordsLs = coords
+                //.sort( (a, b)=> new Date(a.tobs).getTime() - new Date(b.tobs).getTime())
+                .map( coo => [coo.lon, coo.lat, coo.h.toFixed(3), (new Date(coo.tobs).getHours()*60*60) + (new Date(coo.tobs).getMinutes() * 60) + new Date(coo.tobs).getSeconds() ])
+            //console.log(coordsLs)
+            let ls3d = new ol.geom.LineString(coordsLs, 'XYZM')
+            profil.setGeometry(ls3d)
+
+
+            let positions = Cesium.Cartesian3.fromDegreesArray(coords.reduce( (list, coord)=>{
+                list.push(coord.lon, coord.lat)
+                return list
+            }, []));
+
+            let solidWhite = Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.WHITE);
+            let polygonHierarchy = {
+                positions : positions
+            };
+            height = 0.0;
+            extrudedHeight = 30.0;
+            let extrudedPolygon = new Cesium.GeometryInstance({
+                geometry : new Cesium.PolygonGeometry({
+                    polygonHierarchy : polygonHierarchy,
+                    vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+                    extrudedHeight : extrudedHeight,
+                    height : height
+                }),
+                attributes : {
+                    color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromRandom({alpha : 1.0}))
+                }
+            });
+            let extrudedOutlinePolygon = new Cesium.GeometryInstance({
+                geometry : new Cesium.PolygonOutlineGeometry({
+                    polygonHierarchy : polygonHierarchy,
+                    extrudedHeight : extrudedHeight,
+                    height : height
+                }),
+                attributes : {
+                    color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromRandom({alpha : 1.0}))
+                }
+            });
+/*
+            primitives.add(new Cesium.Primitive({
+                geometryInstances : [extrudedPolygon],
+                appearance : new Cesium.PerInstanceColorAppearance({
+                    translucent : false,
+                    closed : true
+                })
+            }));
+*/
+            primitives.add(new Cesium.Primitive({
+                geometryInstances : [extrudedOutlinePolygon],
+                appearance : new Cesium.PerInstanceColorAppearance({
+                    flat : true,
+                    translucent : false,
+                    renderState : {
+                        lineWidth : Math.min(4.0, scene.maximumAliasedLineWidth)
+                    }
+                })
+            }));
+
             $('.rinex').each(function(idx, el){ el.reset() })
             map.getView().fit(bbox, map.getSize(), { duration : 1000 })
             buildChart()
@@ -100,8 +163,12 @@ $('#proj-input').keyup(function(e){
         fetchProj(epsg)
         .then( projDef => {
             proj4.defs(`EPSG:${epsg}`, projDef)
+
+            let format = getFormat(projDef)
             let proj = ol.proj.get(`EPSG:${epsg}`)
+
             mousePositionControl.setProjection(proj)
+            mousePositionControl.setCoordinateFormat(format)
             $(this).val('')
             $('#modal-select-proj').modal('close')
         })        
@@ -113,13 +180,20 @@ $('#modal-chart').modal({
       ready : createChart
 })
 
+function getFormat(projDef){
+    if(projDef.match(/\+proj=longlat/)) 
+        return coordinate => ol.coordinate.toStringHDMS(coordinate, 2)
+    return coordinate => ol.coordinate.toStringXY(coordinate, 3)
+
+}
+
 function buildChart(){
     fetchProj('25830')
     .then(projDef =>{
         proj4.defs('EPSG:25830', projDef)
         let proj = ol.proj.get('EPSG:25830')
         dataChart = dataChart.map( point =>{
-            print(point)
+            //print(point)
             let [x, y] = ol.proj.transform([point.lon, point.lat], 'EPSG:4326', 'EPSG:25830') 
             return {x, y}
         })

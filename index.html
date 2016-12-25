@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <title>Rinex Navigation And Observation Parser. Positioning solver!</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.20.0/ol.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="ol3-cesium/ol.css"></script>
+    <link rel="stylesheet" href="ol3-ext/dist/ol3-ext.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css"/>
     <link rel="stylesheet" href="style.css"/>
   </head>
   <body>
@@ -24,7 +26,8 @@
           <li class="waves-effect waves-light"><a id="btn-calc"><i class="material-icons">send</i></a></li>
           <li class="waves-effect waves-light"><a id="btn-add" href="#modal-select-archivos"><i class="material-icons">attachment</i></a></li>
           <li class="waves-effect waves-light"><a id="btn-chart" href="#modal-chart"><i class="material-icons">insert_chart</i></a></li>
-          <li class="waves-effect waves-light"><a href="#modal-select-proj"><i class="material-icons">settings</i></a></li>
+          <li class="waves-effect waves-light"><a id="btn-3d"><i class="material-icons">3d_rotation</i></a></li>
+          <li class="waves-effect waves-light"><a href="#modal-select-proj"><i class="material-icons white-text">settings</i></a></li>
         </ul>
       </div>
       <div id="modal-cargando" class="modal">
@@ -95,11 +98,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
+  <script src="ol3-cesium/ol3cesium.js"></script>
+  <script src="ol3-cesium/Cesium/Cesium.js"></script>
+  <script src="ol3-ext/dist/ol3-ext.min.js"></script>
   <script>if (window.module) module = window.module;</script>
   <script type="text/javascript">
     const map = new ol.Map({
       layers: [
         new ol.layer.Tile({
+          name : 'IGN Base',
           source: new ol.source.TileWMS({
             url : 'http://www.ign.es/wms-inspire/ign-base?',
             wrapX : false, 
@@ -118,8 +125,31 @@
       })
     })
 
+    map.getControls().forEach( c =>{
+      if(c instanceof ol.control.Rotate){
+        map.removeControl(c)
+        map.addControl(new ol.control.Rotate({
+          autoHide : false
+        }))
+      }
+    })
+    /*
+    const showCompass = ()=> setTimeout(()=>$('.ol-rotate').removeClass('ol-hidden'), 300)
+    showCompass()
+    map.getView().on('change:rotation', showCompass)
+    */
+    let ol3d = new olcs.OLCesium({map: map}); // map is the ol.Map instance
+    let scene = ol3d.getCesiumScene();
+    scene.terrainProvider = new Cesium.CesiumTerrainProvider({
+      url: 'https://assets.agi.com/stk-terrain/world'
+    });
+    //ol3d.setEnabled(true);
+    
+    let primitives = scene.primitives
+
     const layer = new ol.layer.Vector({
-      source : new ol.source.Vector()
+      source : new ol.source.Vector(),
+      displayInLayerSwitcher : false
     })
     map.addLayer(layer)
 
@@ -127,51 +157,52 @@
         condition :     ol.events.condition.pointerMove
       , layers : [ layer ] 
       , filter(feature, layer_){
-        console.log(feature)
-        document.body.style.cursor = 'pointer'
-        console.log('print')
-        $('#info-window').css('visibility', 'visible')
-        let props = feature.getProperties()
-        $('#info-window-content').html(`
-          <h4 class="white-text center">Info del punto capturado</h4>
-          <div class="card-panel white">
-            <table style="width:100%">
-              <tr>
-                <th>Longitud</th>
-                <th>Latitud</th>
-                <th>h elipsoidal</th>
-              </tr>
-              <tr>
-                <td>${props.lon.toFixed(8)}</td>
-                <td>${props.lat.toFixed(8)}</td>
-                <td>${props.h.toFixed(3)}</td>
-              </tr>
-            </table> 
-            <table style="width:100%">
-              <tr>
-                <th>X</th>
-                <th>Y</th>
-                <th>Z</th>
-                <th>dx</th>
-                <th>dy</th>
-                <th>dz</th>
-              </tr>
-              <tr>
-                <td>${props.X.toFixed(8)}</td>
-                <td>${props.Y.toFixed(8)}</td>
-                <td>${props.Z.toFixed(3)}</td>
-                <td>${props.err[0].toFixed(3)}</td>
-                <td>${props.err[1].toFixed(3)}</td>
-                <td>${props.err[2].toFixed(3)}</td>
-              </tr>
-            </table> 
-           </div>
-        `)
-        map.once('pointermove', ()=>{ 
-          document.body.style.cursor = 'default' 
-          $('#info-window').css('visibility', 'hidden')
-        })
-        return feature
+          //console.log(feature)
+          document.body.style.cursor = 'pointer'
+          //console.log('print')
+          $('#info-window').css('visibility', 'visible')
+          let props = feature.getProperties()
+          $('#info-window-content').html(`
+            <h4 class="white-text center">Info del punto capturado</h4>
+            <div class="card-panel white">
+              <table style="width:100%">
+                <tr>
+                  <th>Longitud</th>
+                  <th>Latitud</th>
+                  <th>h elipsoidal</th>
+                </tr>
+                <tr>
+                  <td>${props.lon.toFixed(8)}</td>
+                  <td>${props.lat.toFixed(8)}</td>
+                  <td>${props.h.toFixed(3)}</td>
+                </tr>
+              </table> 
+              <table style="width:100%">
+                <tr>
+                  <th>X</th>
+                  <th>Y</th>
+                  <th>Z</th>
+                  <th>dx</th>
+                  <th>dy</th>
+                  <th>dz</th>
+                </tr>
+                <tr>
+                  <td>${props.X.toFixed(8)}</td>
+                  <td>${props.Y.toFixed(8)}</td>
+                  <td>${props.Z.toFixed(3)}</td>
+                  <td>${props.err[0].toFixed(3)}</td>
+                  <td>${props.err[1].toFixed(3)}</td>
+                  <td>${props.err[2].toFixed(3)}</td>
+                </tr>
+              </table> 
+            </div>
+          `)
+          
+          map.once('pointermove', ()=>{ 
+            document.body.style.cursor = 'default' 
+            $('#info-window').css('visibility', 'hidden')
+          })
+          return feature
       }
     })
 
@@ -187,9 +218,10 @@
     $('.modal:not(#modal-cargando)').modal()
     $('#modal-cargando').modal({ dismissible : false })
 
-    var mousePositionControl = new ol.control.MousePosition({
+    let mousePositionControl = new ol.control.MousePosition({
       projection : 'EPSG:4326',
-      className  : 'ol-mouse-position'
+      className  : 'ol-mouse-position',
+      coordinateFormat : coordinate => ol.coordinate.toStringHDMS(coordinate, 2)
     })
 
     map.addControl(mousePositionControl)
@@ -197,6 +229,71 @@
       .addClass('collection white indigo-text')
       .css('position', 'absolute')
       .css('padding', '5px')
+      .css('margin', '0px')
+      .css('top', 'auto')
+      .css('bottom', '0.5em')
+
+    $('#btn-3d').click(function(){
+      let enabled = !ol3d.getEnabled()
+      ol3d.setEnabled(enabled)
+      $(this).find('i').removeClass(enabled ? 'white-text' : 'green-text').addClass(enabled ? 'green-text' : 'white-text')
+    })
+
+    let pt = new ol.Feature(new ol.geom.Point([0,0]))
+    const profil = new ol.control.Profil({info : {
+      "zmin": "h min",
+      "zmax": "h max",
+      "ytitle": "h elipsoidal (m)",
+      "xtitle": "distancia (km)",
+      "time": "tiempo",
+      "altitude": "h elipsoidal",
+      "distance": "distancia"
+    }})
+
+    const layerSwitcher = new ol.control.LayerSwitcher()
+
+    const layerPoint = new ol.layer.Vector({
+      source : new ol.source.Vector(),
+      displayInLayerSwitcher : false
+    })
+    
+    map.addLayer(layerPoint)
+    pt.setStyle([])
+    layerPoint.getSource().addFeature(pt)
+    map.addControl(layerSwitcher)
+    map.addControl(profil)
+
+    profil.on(["over","out"], function(e){	
+      if (e.type=="over") profil.popup(e.coord[2]+" m")
+      drawPoint(e)
+    });
+
+    function ptStyle(feature) {
+      let style = new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 6,
+          stroke: new ol.style.Stroke({
+            color: 'white',
+            width: 2
+          }),
+          fill: new ol.style.Fill({
+            color: 'green'
+          })
+        })
+      });
+      return [style];
+    }
+
+    // Draw a point on the map when mouse fly over profil
+    function drawPoint(e){
+      if (!pt) return;
+      if (e.type=="over"){	// Show point at coord
+        pt.setGeometry(new ol.geom.Point(e.coord.slice(0,2)))
+        pt.setStyle(ptStyle)
+      } else {	// hide point
+        pt.setStyle([])
+      }
+    };
 
   </script>
   <script>
