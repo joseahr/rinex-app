@@ -61,11 +61,11 @@ const data = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 const options = {
       method : 'POST'
-    , uri : 'http://www.ign.es/wps-analisis/servicios?'
+    , uri : 'http://www.ign.es/wps-analisis/servicios?service=WPS&request=Execute'
     , headers : {
-        'Content-Type' : 'text/xml'
+        'Content-Type' : 'application/xml'
     }
-    , body : encodeURIComponent(data)
+    , body : data
 
 };
 

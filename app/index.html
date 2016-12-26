@@ -5,10 +5,10 @@
     <title>Rinex Navigation And Observation Parser. Positioning solver!</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.20.0/ol.css"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="ol3-cesium/ol.css"></script>
-    <link rel="stylesheet" href="ol3-ext/dist/ol3-ext.min.css"/>
+    <link rel="stylesheet" href="js/ol3-cesium/ol.css"></script>
+    <link rel="stylesheet" href="js/ol3-ext/dist/ol3-ext.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css"/>
-    <link rel="stylesheet" href="style.css"/>
+    <link rel="stylesheet" href="css/style.css"/>
   </head>
   <body>
     <!-- All of the Node.js APIs are available in this renderer process. -->
@@ -98,13 +98,23 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
-  <script src="ol3-cesium/ol3cesium.js"></script>
-  <script src="ol3-cesium/Cesium/Cesium.js"></script>
-  <script src="ol3-ext/dist/ol3-ext.min.js"></script>
+  <script src="js/ol3-cesium/ol3cesium.js"></script>
+  <script src="js/ol3-cesium/Cesium/Cesium.js"></script>
+  <script src="js/ol3-ext/dist/ol3-ext.min.js"></script>
   <script>if (window.module) module = window.module;</script>
   <script type="text/javascript">
     const map = new ol.Map({
       layers: [
+        new ol.layer.Tile({
+          name : 'Ortofoto PNOA',
+          source: new ol.source.TileWMS({
+            url : 'http://www.ign.es/wms-inspire/pnoa-ma?',
+            wrapX : false, 
+            params : {
+              "LAYERS" : 'OI.OrthoimageCoverage'
+            }
+          })
+        }),
         new ol.layer.Tile({
           name : 'IGN Base',
           source: new ol.source.TileWMS({
@@ -114,6 +124,11 @@
               "LAYERS" : 'IGNBaseTodo'
             }
           })
+        }),
+        new ol.layer.Tile({
+          name : 'OSM',
+          source: new ol.source.OSM({ wrapX : false }),
+          visible : false
         })
       ],
       target: 'map',
@@ -297,6 +312,6 @@
 
   </script>
   <script>
-    require('./renderer.js')
+    require('./js/renderer.js')
   </script>
 </html>

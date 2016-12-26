@@ -21,17 +21,16 @@
   "devDependencies": {
     "electron": "^1.4.1",
     "bluebird": "^3.4.6",
-    "proj4": "^2.3.15",
     "request-promise": "^4.1.1"
   },
   "build": {
-    "asarUnpack": "calc/*",
+    "asarUnpack": "app/calc/*",
     "appId": "com.h2geo.rinex-app",
     "win": {}
   },
   "dependencies": {
+    "electron": "^1.4.1",
     "bluebird": "^3.4.6",
-    "chartjs": "^0.3.24",
     "request-promise": "^4.1.1"
   }
 }

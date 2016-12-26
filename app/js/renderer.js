@@ -18,7 +18,7 @@ let [navFilePath, obsFilePath] = [null, null]
 // Función para obtener la proyección de la página epsg.io
 const fetchProj   = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
 
-const build             = process.env.build === 'true'
+const build             =  false //process.env.build === 'true'
 //console.log('build', build, typeof build)
 const BuildResourcesDir = build ? 'resources/app.asar.unpacked/' : ''
 
@@ -37,7 +37,7 @@ $('#btn-calc').click(function(e){
     //console.log('python start')
     $('#modal-cargando').modal('open')
     buildMenu(true)
-    let py = spawn('python',[`${BuildResourcesDir}calc/ResolvePosition.py`, obsFilePath, navFilePath])
+    let py = spawn('python',[`${BuildResourcesDir}app/calc/ResolvePosition.py`, obsFilePath, navFilePath])
 
     navFilePath = obsFilePath = null
     buildMenu()
@@ -45,7 +45,7 @@ $('#btn-calc').click(function(e){
     py.stdout.on('data', data => console.log('data : ', data.toString()))
     py.on('close', ()=>{
         $('#modal-cargando').modal('close')
-        let jsonPath = build ? '../app.asar.unpacked/calc/results/solucion.json' : 'calc/results/solucion.json'
+        let jsonPath = build ? '../../app.asar.unpacked/app/calc/results/solucion.json' : 'calc/results/solucion.json'
         $.get(jsonPath, function(data){
             let coords = dataChart = JSON.parse(data.replace(/\'/g, '"'))
             let bbox   = ol.extent.boundingExtent(coords.map( coo => [coo.lon, coo.lat]))
@@ -65,6 +65,7 @@ $('#btn-calc').click(function(e){
             let ls3d = new ol.geom.LineString(coordsLs, 'XYZM')
             profil.setGeometry(ls3d)
 
+            /*
 
             let positions = Cesium.Cartesian3.fromDegreesArray(coords.reduce( (list, coord)=>{
                 list.push(coord.lon, coord.lat)
@@ -76,7 +77,7 @@ $('#btn-calc').click(function(e){
                 positions : positions
             };
             height = 0.0;
-            extrudedHeight = 30.0;
+            extrudedHeight = 0.0;
             let extrudedPolygon = new Cesium.GeometryInstance({
                 geometry : new Cesium.PolygonGeometry({
                     polygonHierarchy : polygonHierarchy,
@@ -98,7 +99,7 @@ $('#btn-calc').click(function(e){
                     color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromRandom({alpha : 1.0}))
                 }
             });
-/*
+
             primitives.add(new Cesium.Primitive({
                 geometryInstances : [extrudedPolygon],
                 appearance : new Cesium.PerInstanceColorAppearance({
@@ -106,7 +107,7 @@ $('#btn-calc').click(function(e){
                     closed : true
                 })
             }));
-*/
+
             primitives.add(new Cesium.Primitive({
                 geometryInstances : [extrudedOutlinePolygon],
                 appearance : new Cesium.PerInstanceColorAppearance({
@@ -117,6 +118,7 @@ $('#btn-calc').click(function(e){
                     }
                 })
             }));
+            */
 
             $('.rinex').each(function(idx, el){ el.reset() })
             map.getView().fit(bbox, map.getSize(), { duration : 1000 })
@@ -138,7 +140,7 @@ $('input[type=file]').change(function(e){
         if(!extname.match(/\.\d{2}[oO]/)) 
             return Materialize.toast('Debe añadir un fichero con extensión .XXo ó .XXO, por ejemplo .11o', 2500)
 
-        let fpath = `${BuildResourcesDir}calc/data/obs${extname}`
+        let fpath = `${BuildResourcesDir}app/calc/data/obs${extname}`
         readFile(e.target.files[0])
         .then(ftext=> fs.writeFile(fpath, ftext))
         .then( ()=>{ obsFilePath = fpath })
@@ -148,7 +150,7 @@ $('input[type=file]').change(function(e){
         if(!extname.match(/\.\d{2}[nN]/))
             return Materialize.toast('Debe añadir un fichero con extensión .XXn ó .XXN, por ejemplo .11n', 2500)
         
-        let fpath = `${BuildResourcesDir}calc/data/nav${extname}`
+        let fpath = `${BuildResourcesDir}app/calc/data/nav${extname}`
         readFile(e.target.files[0])
         .then(ftext=> fs.writeFile(fpath, ftext))
         .then( ()=>{ navFilePath = fpath })
