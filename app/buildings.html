@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Buildings Viewer</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css"/>
+    <link rel="stylesheet" href="css/style.css"/>
+    <link rel="stylesheet" href="js/OSMBuildings/OSMBuildings.css"/>
+  </head>
+  <body>
+    <div id="map">
+    </div>
+    <div class="control tilt">
+    <button class="dec">&#8601;</button>
+    <button class="inc">&#8599;</button>
+    </div>
+
+    <div class="control rotation">
+    <button class="inc">&#8630;</button>
+    <button class="dec">&#8631;</button>
+    </div>
+
+    <div class="control zoom">
+    <button class="dec">-</button>
+    <button class="inc">+</button>
+    </div>
+  </body>
+  <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js" ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+  <script src="js/OSMBuildings/OSMBuildings.js"></script>
+  <script type="text/javascript">if (window.module) module = window.module;</script>
+  <script type="text/javascript">
+    const { remote, ipcRenderer } = require('electron')
+
+    let osmb;
+
+    var controlButtons = document.querySelectorAll('.control button');
+
+    for (var i = 0, il = controlButtons.length; i < il; i++) {
+        controlButtons[i].addEventListener('click', function(e) {
+            var button = this;
+            var parentClassList = button.parentNode.classList;
+            var direction = button.classList.contains('inc') ? 1 : -1;
+            var increment;
+            var property;
+
+            if (parentClassList.contains('tilt')) {
+                property = 'Tilt';
+                increment = direction*10;
+            }
+            if (parentClassList.contains('rotation')) {
+                property = 'Rotation';
+                increment = direction*10;
+            }
+            if (parentClassList.contains('zoom')) {
+                property = 'Zoom';
+                increment = direction*1;
+            }
+            if (property) {
+                osmb['set'+ property](osmb['get'+ property]()+increment);
+            }
+        });
+    }
+
+    ipcRenderer.on('main-change-view', function(event, view){
+        
+        if(!osmb){
+            osmb = new OSMBuildings({
+                baseURL: './OSMBuildings',
+                position: { latitude:view.center[1], longitude:view.center[0] },
+                zoom: view.zoom,
+                state: true, // stores map position/rotation in url
+                effects: ['shadows'],
+                attribution: '© 3D <a href="https://osmbuildings.org/copyright/">OSM Buildings</a>'
+            }).appendTo('map');
+
+            osmb.addMapTiles('https://{s}.tiles.mapbox.com/v3/osmbuildings.kbpalbpk/{z}/{x}/{y}.png',{
+                attribution: '© Data <a href="https://openstreetmap.org/copyright/">OpenStreetMap</a> · © Map <a href="https://mapbox.com/">Mapbox</a>'
+            });
+
+            osmb.addGeoJSONTiles('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
+
+
+            osmb.on('pointermove', function(e) {
+                var id = osmb.getTarget(e.detail.x, e.detail.y, function(id) {
+                    if (id) {
+                        document.body.style.cursor = 'pointer';
+                        osmb.highlight(id, '#f08000');
+                    } else {
+                        document.body.style.cursor = 'default';
+                        osmb.highlight(null);
+                    }
+                });
+            });
+
+            osmb.on('change', function(e){
+                let center = osmb.getPosition()
+                let zoom = osmb.getZoom()
+                let rotation = osmb.getRotation()
+                ipcRenderer.send('child-change-view', {center, zoom, rotation})
+            })
+
+            osmb.on('zoom', function(e){
+                let center = osmb.getPosition()
+                let zoom = osmb.getZoom()
+                let rotation = osmb.getRotation()
+                ipcRenderer.send('child-change-view', {center, zoom, rotation})          
+            })
+
+            return;
+        }
+        
+        console.log('en ventana hija', view)
+        osmb.setZoom(view.zoom)
+        let [longitude, latitude] = view.center
+        osmb.setPosition({longitude, latitude})
+        osmb.setRotation(view.rotation)
+        changed = true
+    });
+  </script>
+</html>

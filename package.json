@@ -29,8 +29,8 @@
     "win": {}
   },
   "dependencies": {
-    "electron": "^1.4.1",
     "bluebird": "^3.4.6",
+    "ipc": "0.0.1",
     "request-promise": "^4.1.1"
   }
 }

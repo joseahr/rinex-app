@@ -1,6 +1,7 @@
-const { remote } = require('electron')
+const { remote, ipcRenderer } = require('electron')
 const { BrowserWindow } = remote
 const { Menu, MenuItem } = remote
+
 const bb       = require('bluebird')
 const fs       = bb.promisifyAll(require('fs'))
 const path     = require('path')
@@ -224,6 +225,47 @@ function createChart(){
     })
 }
 
+function openBuildingsWindow(){
+    let child = new BrowserWindow({parent : remote.getCurrentWindow(), modal: false, show: false})
+
+    child.setMenu(null)
+    child.loadURL(url.format({
+        pathname: path.join(__dirname, '../buildings.html'),
+        protocol: 'file:',
+        slashes: true
+    }))
+    child.webContents.openDevTools()
+    let [listenerCenter, listenerResolution, listenerRotation] = [];
+    ipcRenderer.on('child-change-view', function(event, view){
+        map.getView().set('center', [view.center.longitude, view.center.latitude], true)
+        map.getView().set('zoom', view.zoom, true)
+        map.getView().set('rotation', view.rotation, true)
+    })
+    child.once('ready-to-show', () => {
+        child.show()
+        let view = map.getView()
+        let [center, zoom, rotation] = [view.getCenter(), view.getZoom(), view.getRotation()]
+        ipcRenderer.send('main-change-view', {center, zoom, rotation})
+
+        listenerCenter = map.getView().on('change:center', change);
+        listenerResolution = map.getView().on('change:resolution', change);
+        listenerRotation = map.getView().on('change:rotation', change);
+
+        function change(){
+            let view = map.getView()
+            let [center, zoom, rotation] = [view.getCenter(), view.getZoom(), view.getRotation()]
+            ipcRenderer.send('main-change-view', {center, zoom, rotation})
+        }
+    })
+
+    child.on('close', ()=>{
+        map.un(listenerCenter)
+        map.un(listenerResolution)
+        map.un(listenerRotation)
+        ipcRenderer.removeAllListeners()
+    })
+}
+
 // Función para crear/actualizar el menú principal
 const buildMenu = disabled =>{
     let enabled = !disabled
@@ -233,6 +275,7 @@ const buildMenu = disabled =>{
             { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled : enabled },
             { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled : obsFilePath && navFilePath ? true : false },
             { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : dataChart ? true : false },
+            { label : 'Edificios', click(){ openBuildingsWindow() } },
             { label : 'Configuración', click(){ $('#modal-select-proj').modal('open') }, enabled }
         ]
     },{
@@ -241,7 +284,7 @@ const buildMenu = disabled =>{
             let child = new BrowserWindow({parent : remote.getCurrentWindow(), modal: true, show: false})
             child.setMenu(null)
             child.loadURL(url.format({
-                pathname: path.join(__dirname, 'about.html'),
+                pathname: path.join(__dirname, '../about.html'),
                 protocol: 'file:',
                 slashes: true
             }))

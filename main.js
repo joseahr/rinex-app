@@ -1,4 +1,5 @@
 const electron = require('electron')
+const ipcMain = electron.ipcMain
 // Module to control application life.
 const app = electron.app
 // Module to create native browser window.
@@ -23,7 +24,7 @@ function createWindow () {
   }))
 
   // Open the DevTools.
-  //mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   mainWindow.setMenu(null)
 
@@ -60,3 +61,13 @@ app.on('activate', function () {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+ipcMain.on('main-change-view', function(event, view){
+  console.log('main process main change view', view)
+  BrowserWindow.getAllWindows()[1].webContents.send('main-change-view', view)
+})
+
+ipcMain.on('child-change-view', function(event, view){
+  console.log('main process child change view', view)
+  BrowserWindow.getAllWindows()[0].webContents.send('child-change-view', view)
+})

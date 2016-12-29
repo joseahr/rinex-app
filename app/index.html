@@ -11,12 +11,6 @@
     <link rel="stylesheet" href="css/style.css"/>
   </head>
   <body>
-    <!-- All of the Node.js APIs are available in this renderer process. -->
-    <!--
-    We are using Node.js <script>document.write(process.versions.node)</script>,
-    Chromium <script>document.write(process.versions.chrome)</script>,
-    and Electron <script>document.write(process.versions.electron)</script>.
-    -->
     <div id="map">
       <div class="fixed-action-btn toolbar">
         <a class="btn-floating btn-large red">
@@ -148,11 +142,7 @@
         }))
       }
     })
-    /*
-    const showCompass = ()=> setTimeout(()=>$('.ol-rotate').removeClass('ol-hidden'), 300)
-    showCompass()
-    map.getView().on('change:rotation', showCompass)
-    */
+
     let ol3d = new olcs.OLCesium({map: map}); // map is the ol.Map instance
     let scene = ol3d.getCesiumScene();
     scene.terrainProvider = new Cesium.CesiumTerrainProvider({
@@ -309,7 +299,6 @@
         pt.setStyle([])
       }
     };
-
   </script>
   <script>
     require('./js/renderer.js')
