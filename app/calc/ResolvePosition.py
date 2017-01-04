@@ -6,8 +6,8 @@ from ObsParser import *
 from NavParser import *
 from Utils import Utils
 from math import sqrt, sin, atan2, cos, pi, atan,acos, tan
-from Geometrias.Punto3D import Punto3D
-from Proyecciones.Cargeo2Geo import Cargeo2Geo
+from pyGeo.Geometrias.Punto3D import Punto3D
+from pyGeo.Proyecciones.Cargeo2Geo import Cargeo2Geo
 from numpy import exp, matrix, linalg, diag, shape, dot
 import cli.app
 import os

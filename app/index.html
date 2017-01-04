@@ -84,6 +84,34 @@
           <a href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Cerrar</a>
         </div>
       </div>
+
+      <!-- Modal Structure -->
+      <div id="modal-select-aux" class="modal bottom-sheet">
+        <div class="modal-content">
+          <p style="font-weight : bold;">Datos auxiliares</p>
+          <form action="#" class="rinex ">
+            <div class="file-field input-field col s8">
+              <div class="btn">
+                <span>Selecciona un archivo</span>
+                <input type="file" id="aux-data">
+              </div>
+              <div class="file-path-wrapper">
+                <input class="file-path validate" type="text">
+              </div>
+            </div>
+            <div class="file-field input-field">
+              <label for="aux-data-epsg">Selecciona el código EPSG</label>
+              <input type="text" id="aux-data-epsg">
+            </div>
+            <div class="file-field input-field">
+              <a id="btn-aux-data" class="waves-effect waves-light btn col s12"><i class="material-icons right">add</i>Añadir</a>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <a href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Cerrar</a>
+        </div>
+      </div>
     </div>
   </body>
   <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
@@ -151,6 +179,12 @@
     //ol3d.setEnabled(true);
     
     let primitives = scene.primitives
+
+    const layerExtraInfo = new ol.layer.Vector({
+      source : new ol.source.Vector(),
+      displayInLayerSwitcher : false
+    })
+    map.addLayer(layerExtraInfo)
 
     const layer = new ol.layer.Vector({
       source : new ol.source.Vector(),

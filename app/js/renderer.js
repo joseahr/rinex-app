@@ -11,6 +11,9 @@ const request  = require('request-promise')
 const reader   = new FileReader
 const print    = console.log.bind(console)
 
+const Parsers = require('./Parsers')
+const allowedFormats = Object.keys(Parsers)
+
 let ctx        = $('#chart')
 let chart
 let dataChart
@@ -19,7 +22,7 @@ let [navFilePath, obsFilePath] = [null, null]
 // Función para obtener la proyección de la página epsg.io
 const fetchProj   = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
 
-const build             =  false //process.env.build === 'true'
+const build             =  true //process.env.build === 'true'
 //console.log('build', build, typeof build)
 const BuildResourcesDir = build ? 'resources/app.asar.unpacked/' : ''
 
@@ -129,9 +132,50 @@ $('#btn-calc').click(function(e){
     })
 })
 
-$('input[type=file]').change(function(e){
+$('#btn-aux-data').click(function(e){
+    let p = $('#aux-data').get(0).files[0].path
+    let extname = path.extname(p).replace('.', '')
+    let epsgCode = $('#aux-data-epsg').val()
+
+    if(!epsgCode) return Materialize.toast('Debes añadir el código EPSG correspondiente a los datos de entrada', 5000)
+
+    if(allowedFormats.find( format => format == extname)){
+        fetchProj(epsgCode)
+        .then(projDef=>{
+            let parser = Parsers[extname]
+
+            return parser.fromFile(p)
+            .then( geojson=>{
+                proj4.defs(`EPSG:${epsgCode}`, projDef)
+
+
+                let geojsonParser = new ol.format.GeoJSON()
+                let features = geojsonParser.readFeatures(geojson, 
+                    { dataProjection : `EPSG:${epsgCode}`, featureProjection : 'EPSG:4326' })
+                
+                layerExtraInfo.getSource().addFeatures(features)
+
+                let coords = features.map(f => f.getGeometry().getCoordinates())
+                let bbox = ol.extent.boundingExtent(coords)
+
+                map.getView().fit(bbox, map.getSize())
+
+                return Promise.resolve()
+
+            })
+        })
+        .then(()=>Materialize.toast('Datos auxiliares añadidos', 2500))
+        .catch(()=>Materialize.toast('Error añadiendo datos auxiliares', 2500))
+
+    } else {
+        return Materialize.toast(`Formato ${extname} no soportado. Los formatos soportados son : ${allowedFormats.join(', ')}`, 2500)
+    }
+})
+
+$('#nav-input, #obs-input').change(function(e){
+    console.log(e.target.files[0].path)
     // Path absoluto
-    let p       = $(this).val()
+    let p       = e.target.files[0].path
     let extname = path.extname(p)
     let idElem  = $(this).attr('id')
     //console.log(extname)
@@ -140,22 +184,26 @@ $('input[type=file]').change(function(e){
     if(idElem == 'obs-input'){
         if(!extname.match(/\.\d{2}[oO]/)) 
             return Materialize.toast('Debe añadir un fichero con extensión .XXo ó .XXO, por ejemplo .11o', 2500)
-
+        obsFilePath = p
+/*
         let fpath = `${BuildResourcesDir}app/calc/data/obs${extname}`
         readFile(e.target.files[0])
         .then(ftext=> fs.writeFile(fpath, ftext))
         .then( ()=>{ obsFilePath = fpath })
         .catch( err =>{ Materialize.toast(`Error : ${err}`, 2500) })
-        
-    } else {
+*/
+
+    } else if(idElem == 'nav-input'){
         if(!extname.match(/\.\d{2}[nN]/))
             return Materialize.toast('Debe añadir un fichero con extensión .XXn ó .XXN, por ejemplo .11n', 2500)
-        
+        navFilePath = p
+/*        
         let fpath = `${BuildResourcesDir}app/calc/data/nav${extname}`
         readFile(e.target.files[0])
         .then(ftext=> fs.writeFile(fpath, ftext))
         .then( ()=>{ navFilePath = fpath })
         .catch( err =>{ Materialize.toast(`Error : ${err}`, 2500) })
+*/
     }
     buildMenu()
 });
@@ -228,19 +276,21 @@ function createChart(){
 function openBuildingsWindow(){
     let child = new BrowserWindow({parent : remote.getCurrentWindow(), modal: false, show: false})
 
-    child.setMenu(null)
     child.loadURL(url.format({
         pathname: path.join(__dirname, '../buildings.html'),
         protocol: 'file:',
         slashes: true
     }))
-    child.webContents.openDevTools()
+    //child.webContents.openDevTools()
+    child.setMenu(null)
     let [listenerCenter, listenerResolution, listenerRotation] = [];
-    ipcRenderer.on('child-change-view', function(event, view){
+    let listenerIpc = function(event, view){
         map.getView().set('center', [view.center.longitude, view.center.latitude], true)
         map.getView().set('zoom', view.zoom, true)
         map.getView().set('rotation', view.rotation, true)
-    })
+    }
+
+    ipcRenderer.on('child-change-view', listenerIpc)
     child.once('ready-to-show', () => {
         child.show()
         let view = map.getView()
@@ -252,6 +302,7 @@ function openBuildingsWindow(){
         listenerRotation = map.getView().on('change:rotation', change);
 
         function change(){
+            console.log('seeend to child')
             let view = map.getView()
             let [center, zoom, rotation] = [view.getCenter(), view.getZoom(), view.getRotation()]
             ipcRenderer.send('main-change-view', {center, zoom, rotation})
@@ -259,10 +310,10 @@ function openBuildingsWindow(){
     })
 
     child.on('close', ()=>{
-        map.un(listenerCenter)
-        map.un(listenerResolution)
-        map.un(listenerRotation)
-        ipcRenderer.removeAllListeners()
+        map.getView().unByKey(listenerCenter)
+        map.getView().unByKey(listenerResolution)
+        map.getView().unByKey(listenerRotation)
+        ipcRenderer.removeListener('main-change-view', listenerIpc)
     })
 }
 
@@ -273,6 +324,7 @@ const buildMenu = disabled =>{
         label   : 'Opciones'
         , submenu : [
             { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled : enabled },
+            { label : 'Añadir datos auxiliares', click(){ $('#modal-select-aux').modal('open') }, enabled : enabled },
             { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled : obsFilePath && navFilePath ? true : false },
             { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : dataChart ? true : false },
             { label : 'Edificios', click(){ openBuildingsWindow() } },
