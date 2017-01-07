@@ -16,13 +16,14 @@ const allowedFormats = Object.keys(Parsers)
 
 let ctx        = $('#chart')
 let chart
+let buildingsWindow
 let dataChart
 // Variables que hacen referencia al path para los ficheros RINEX
 let [navFilePath, obsFilePath] = [null, null]
 // Función para obtener la proyección de la página epsg.io
 const fetchProj   = epsg => request({ uri : `http://epsg.io/${epsg}.proj4` })
 
-const build             =  true //process.env.build === 'true'
+const build             =  false //process.env.build === 'true'
 //console.log('build', build, typeof build)
 const BuildResourcesDir = build ? 'resources/app.asar.unpacked/' : ''
 
@@ -43,11 +44,10 @@ $('#btn-calc').click(function(e){
     buildMenu(true)
     let py = spawn('python',[`${BuildResourcesDir}app/calc/ResolvePosition.py`, obsFilePath, navFilePath])
 
-    navFilePath = obsFilePath = null
-    buildMenu()
-
     py.stdout.on('data', data => console.log('data : ', data.toString()))
     py.on('close', ()=>{
+        navFilePath = obsFilePath = null
+
         $('#modal-cargando').modal('close')
         let jsonPath = build ? '../../app.asar.unpacked/app/calc/results/solucion.json' : 'calc/results/solucion.json'
         $.get(jsonPath, function(data){
@@ -274,7 +274,12 @@ function createChart(){
 }
 
 function openBuildingsWindow(){
-    let child = new BrowserWindow({parent : remote.getCurrentWindow(), modal: false, show: false})
+
+    if(buildingsWindow) return
+
+    let child = buildingsWindow = new BrowserWindow({parent : remote.getCurrentWindow(), modal: false, show: false})
+
+    buildMenu()
 
     child.loadURL(url.format({
         pathname: path.join(__dirname, '../buildings.html'),
@@ -314,6 +319,8 @@ function openBuildingsWindow(){
         map.getView().unByKey(listenerResolution)
         map.getView().unByKey(listenerRotation)
         ipcRenderer.removeListener('main-change-view', listenerIpc)
+        buildingsWindow = null;
+        buildMenu()
     })
 }
 
@@ -325,9 +332,9 @@ const buildMenu = disabled =>{
         , submenu : [
             { label : 'Añadir ficheros', click(){ $('#modal-select-archivos').modal('open') }, enabled : enabled },
             { label : 'Añadir datos auxiliares', click(){ $('#modal-select-aux').modal('open') }, enabled : enabled },
-            { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled : obsFilePath && navFilePath ? true : false },
-            { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : dataChart ? true : false },
-            { label : 'Edificios', click(){ openBuildingsWindow() } },
+            { label : 'Calcular', click(){ $('#btn-calc').trigger('click') }, enabled : enabled && obsFilePath && navFilePath ? true : false },
+            { label : 'Gráficos', click(){ $('#modal-chart').modal('open') }, enabled : enabled && dataChart ? true : false },
+            { label : 'Edificios', click(){ openBuildingsWindow() }, enabled : buildingsWindow == null },
             { label : 'Configuración', click(){ $('#modal-select-proj').modal('open') }, enabled }
         ]
     },{
