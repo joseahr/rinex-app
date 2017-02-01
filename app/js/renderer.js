@@ -69,61 +69,6 @@ $('#btn-calc').click(function(e){
             let ls3d = new ol.geom.LineString(coordsLs, 'XYZM')
             profil.setGeometry(ls3d)
 
-            /*
-
-            let positions = Cesium.Cartesian3.fromDegreesArray(coords.reduce( (list, coord)=>{
-                list.push(coord.lon, coord.lat)
-                return list
-            }, []));
-
-            let solidWhite = Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.WHITE);
-            let polygonHierarchy = {
-                positions : positions
-            };
-            height = 0.0;
-            extrudedHeight = 0.0;
-            let extrudedPolygon = new Cesium.GeometryInstance({
-                geometry : new Cesium.PolygonGeometry({
-                    polygonHierarchy : polygonHierarchy,
-                    vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-                    extrudedHeight : extrudedHeight,
-                    height : height
-                }),
-                attributes : {
-                    color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromRandom({alpha : 1.0}))
-                }
-            });
-            let extrudedOutlinePolygon = new Cesium.GeometryInstance({
-                geometry : new Cesium.PolygonOutlineGeometry({
-                    polygonHierarchy : polygonHierarchy,
-                    extrudedHeight : extrudedHeight,
-                    height : height
-                }),
-                attributes : {
-                    color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromRandom({alpha : 1.0}))
-                }
-            });
-
-            primitives.add(new Cesium.Primitive({
-                geometryInstances : [extrudedPolygon],
-                appearance : new Cesium.PerInstanceColorAppearance({
-                    translucent : false,
-                    closed : true
-                })
-            }));
-
-            primitives.add(new Cesium.Primitive({
-                geometryInstances : [extrudedOutlinePolygon],
-                appearance : new Cesium.PerInstanceColorAppearance({
-                    flat : true,
-                    translucent : false,
-                    renderState : {
-                        lineWidth : Math.min(4.0, scene.maximumAliasedLineWidth)
-                    }
-                })
-            }));
-            */
-
             $('.rinex').each(function(idx, el){ el.reset() })
             map.getView().fit(bbox, map.getSize(), { duration : 1000 })
             buildChart()
@@ -135,34 +80,27 @@ $('#btn-calc').click(function(e){
 $('#btn-aux-data').click(function(e){
     let p = $('#aux-data').get(0).files[0].path
     let extname = path.extname(p).replace('.', '')
-    let epsgCode = $('#aux-data-epsg').val()
-
-    if(!epsgCode) return Materialize.toast('Debes añadir el código EPSG correspondiente a los datos de entrada', 5000)
 
     if(allowedFormats.find( format => format == extname)){
-        fetchProj(epsgCode)
-        .then(projDef=>{
-            let parser = Parsers[extname]
 
-            return parser.fromFile(p)
-            .then( geojson=>{
-                proj4.defs(`EPSG:${epsgCode}`, projDef)
+        let parser = Parsers[extname]
 
+        parser.fromFile(p, 4326)
+        .then( geojson=>{
 
-                let geojsonParser = new ol.format.GeoJSON()
-                let features = geojsonParser.readFeatures(geojson, 
-                    { dataProjection : `EPSG:${epsgCode}`, featureProjection : 'EPSG:4326' })
-                
-                layerExtraInfo.getSource().addFeatures(features)
+            let geojsonParser = new ol.format.GeoJSON()
+            let features = geojsonParser.readFeatures(geojson, 
+                { dataProjection : `EPSG:4326`, featureProjection : 'EPSG:4326' })
+            
+            layerExtraInfo.getSource().addFeatures(features)
 
-                let coords = features.map(f => f.getGeometry().getCoordinates())
-                let bbox = ol.extent.boundingExtent(coords)
+            let coords = features.map(f => f.getGeometry().getCoordinates())
+            let bbox = ol.extent.boundingExtent(coords)
 
-                map.getView().fit(bbox, map.getSize())
+            map.getView().fit(bbox, map.getSize())
 
-                return Promise.resolve()
+            return Promise.resolve()
 
-            })
         })
         .then(()=>Materialize.toast('Datos auxiliares añadidos', 2500))
         .catch(()=>Materialize.toast('Error añadiendo datos auxiliares', 2500))

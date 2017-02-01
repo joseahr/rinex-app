@@ -9,6 +9,7 @@ from math import sqrt, sin, atan2, cos, pi, atan,acos, tan
 from pyGeo.Geometrias.Punto3D import Punto3D
 from pyGeo.Proyecciones.Cargeo2Geo import Cargeo2Geo
 from numpy import exp, matrix, linalg, diag, shape, dot
+from functools import reduce
 import cli.app
 import os
 
@@ -33,17 +34,19 @@ class Solver(object) :
         self.__calcReceptorPositions()
 
     def getB(self, h):
-        datos = [[0.0, 1.156], [500.0, 1.079], [1000.0, 1.006], [1500.0, 0.938], [2000.0, 0.874], [2500.0, 0.813], [3000.0, 0.757], [4000.0, 0.654], [5000.0, 0.563]]
+        datos = [ [0.0000, 1.156], [500.00, 1.079], [1000.0, 1.006],\
+                  [1500.0, 0.938], [2000.0, 0.874], [2500.0, 0.813],\
+                  [3000.0, 0.757], [4000.0, 0.654], [5000.0, 0.563] ]
         b = 0
         try :
             for indx, el in enumerate(datos):
                 d0 = el
                 d1 = datos[indx + 1]
                 if h >= d0[0] and h <= d1[0] :
-                    distancia = d1[0] - d0[0]
+                    distancia  = d1[0] - d0[0]
                     distancia2 = h - d0[0]
-                    dif= d1[1] - d0[1]
-                    b = d0[1] + (distancia2*dif/distancia)
+                    dif        = d1[1] - d0[1]
+                    b          = d0[1] + (distancia2*dif/distancia)
                     return b
         except IndexError as e:
             return b
@@ -247,8 +250,9 @@ class Solver(object) :
                     eij, nij, uij = Utils.XYZ2ENU(lon_est*pi/180, lat_est*pi/180, incX, incY, incZ)
                     azi, ele, dist = Utils.ENU2CLA(eij, nij, uij)
 
+                    ##print(ele*180/pi)
                     ## Si la elvación es menor que 10º descartamos la observación
-                    #if ele < 10 : continue
+                    if ele < 10*pi/180 or ele > 170*pi/180: continue
 
                     ## Cálculo de la presión
                     pres = 1013.25 * ((1 - 0.000065*h_est)**5.225)
@@ -381,14 +385,32 @@ def ResolvePosition(app):
         ##print(app.params.fnav)
         navParser = NavigationParser(app.params.fnav)
         obsParser = ObservationParser(app.params.fobs)
-        print('Lo que tarda en hacer los archivos:', time.time() - t)
+        print('Lo que tarda en parsear los archivos:', time.time() - t)
         t = time.time()
         solver = Solver(navParser, obsParser)
         resultados = solver.resultados
+        '''
+        def skrt (list) : return sqrt(list[0]**2 + list[1]**2 + list[2]**2)
+
+        errorItinerario = 0
+        for e in resultados : 
+            errorItinerario += skrt(e['err'])
+        errorItinerario /= len(resultados)
+        errorCritico = errorItinerario * 1.5
+
+        print(len(resultados))
+
+        resultados = [ r for r in resultados if skrt(r['err']) < errorCritico ]
+        '''
+        print(len(resultados))
+        
+
         print('Tiempo que tarda en Resolver Posición satélite y Receptor', time.time() - t)
         t = time.time()
+
         ##print(resultados)
         fichPath = os.path.dirname(os.path.realpath(__file__))
+
         with open(os.path.join(fichPath, 'results', 'solucion.json'), 'wt') as sol:
             sol.write(str(resultados))
         print('Timepo que tarda en hacer el archivo JSON', time.time() - t)

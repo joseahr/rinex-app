@@ -267,7 +267,8 @@ class ObservationParser(object):
                             the_obs[len(the_obs):] = ['' for x in range(size)]
 
                         ## Nombre del satélite
-                        sat = sats[ int((obsindex - start) / step) ]
+                        sat = sats[ int( (obsindex - start) / step) ]
+                        #print (sat, obsindex, start, step)
                         #print sat
 
                         ## Creamos un objeto dentro del objeto observaciones

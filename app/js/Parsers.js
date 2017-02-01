@@ -1,14 +1,20 @@
-console.log(process.versions.node)
 const readFile = require('bluebird').promisify(require('fs').readFile)
-const path = require('path')
-const shp = require('gtran-shapefile')
+
+const Exec = require('bluebird').promisify(require('child_process').exec);
+
+const path = require('path');
 
 
-
-module.exports = {
+const parsers = {
     shp : {
-        fromFile(path_){
-            return shp.toGeoJson(path_)
+        fromFile(path_, epsg){
+            path_ = path.normalize(path_);
+            let geojsonPath = path_.replace('.shp', '.geojson')
+            return Exec(`ogr2ogr -f GeoJSON -t_srs EPSG:${epsg} ${geojsonPath} ${path_}`, {})
+                .then( ()=>{
+                    return readFile(geojsonPath, { encoding : 'utf-8' })
+                    .then(text => JSON.parse(text));
+                });
         },
     },
     csv : {
@@ -31,3 +37,9 @@ module.exports = {
         }
     }
 }
+
+/*parsers.shp.fromFile('C:\\Users\\Jose\\Desktop\\SHP\\pedreguer.shp', 25830)
+.then(console.log.bind(console))
+.catch(console.log.bind(console))*/
+
+module.exports = parsers;
