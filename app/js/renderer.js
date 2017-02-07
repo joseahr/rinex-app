@@ -120,7 +120,7 @@ $('#nav-input, #obs-input').change(function(e){
     //this.form.reset()
 
     if(idElem == 'obs-input'){
-        if(!extname.match(/\.\d{2}[oO]/)) 
+        if(!extname.match(/\.\d{2}[oO]/$)) 
             return Materialize.toast('Debe añadir un fichero con extensión .XXo ó .XXO, por ejemplo .11o', 2500)
         obsFilePath = p
 /*
@@ -132,7 +132,7 @@ $('#nav-input, #obs-input').change(function(e){
 */
 
     } else if(idElem == 'nav-input'){
-        if(!extname.match(/\.\d{2}[nN]/))
+        if(!extname.match(/\.\d{2}[nN]/$))
             return Materialize.toast('Debe añadir un fichero con extensión .XXn ó .XXN, por ejemplo .11n', 2500)
         navFilePath = p
 /*        
